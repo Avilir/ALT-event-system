@@ -1,0 +1,131 @@
+name: Deploy
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - testpypi
+          - pypi
+      create_github_release:
+        description: 'Create GitHub release (only for PyPI deployment)'
+        required: false
+        type: boolean
+        default: false
+      release_notes:
+        description: 'Release notes (optional)'
+        required: false
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}  # Uses GitHub environments for protection
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for version detection
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+
+    - name: Get version
+      id: get_version
+      run: |
+        # Extract version from pyproject.toml
+        VERSION=$(grep '^version' pyproject.toml | cut -d'"' -f2)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Package version: $VERSION"
+
+    - name: Build distribution
+      run: |
+        python -m build
+        echo "Built distributions:"
+        ls -la dist/
+
+    - name: Check if version already exists on PyPI
+      if: inputs.environment == 'pypi'
+      run: |
+        VERSION=${{ steps.get_version.outputs.version }}
+        if pip index versions ALT-event-system | grep -q "^$VERSION$"; then
+          echo "❌ Error: Version $VERSION already exists on PyPI!"
+          exit 1
+        else
+          echo "✅ Version $VERSION is not on PyPI, safe to deploy"
+        fi
+
+    - name: Deploy to TestPyPI
+      if: inputs.environment == 'testpypi'
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN }}
+      run: |
+        echo "🚀 Deploying to TestPyPI..."
+        twine upload --repository testpypi dist/*
+        echo ""
+        echo "✅ Package deployed to TestPyPI!"
+        echo "View at: https://test.pypi.org/project/ALT-event-system/${{ steps.get_version.outputs.version }}/"
+        echo ""
+        echo "To install from TestPyPI:"
+        echo "pip install -i https://test.pypi.org/simple/ ALT-event-system==${{ steps.get_version.outputs.version }}"
+
+    - name: Deploy to PyPI
+      if: inputs.environment == 'pypi'
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        echo "🚀 Deploying to PyPI..."
+        twine upload dist/*
+        echo ""
+        echo "✅ Package deployed to PyPI!"
+        echo "View at: https://pypi.org/project/ALT-event-system/${{ steps.get_version.outputs.version }}/"
+        echo ""
+        echo "To install:"
+        echo "pip install ALT-event-system==${{ steps.get_version.outputs.version }}"
+
+    - name: Create GitHub Release
+      if: inputs.environment == 'pypi' && inputs.create_github_release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ steps.get_version.outputs.version }}
+        name: Release v${{ steps.get_version.outputs.version }}
+        body: |
+          ## ALT Event System v${{ steps.get_version.outputs.version }}
+          
+          ${{ inputs.release_notes || 'See CHANGELOG.md for details.' }}
+          
+          ### Installation
+          ```bash
+          pip install ALT-event-system==${{ steps.get_version.outputs.version }}
+          ```
+          
+          ### Links
+          - [PyPI Package](https://pypi.org/project/ALT-event-system/${{ steps.get_version.outputs.version }}/)
+          - [Documentation](https://github.com/${{ github.repository }}/tree/v${{ steps.get_version.outputs.version }}/docs)
+        files: dist/*
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+
+    - name: Post-deployment summary
+      if: always()
+      run: |
+        echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version:** ${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,81 @@
+name: Build
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      upload_artifacts:
+        description: 'Upload build artifacts to GitHub'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+
+    - name: Build distribution
+      run: |
+        python -m build
+        echo "Build completed successfully!"
+        echo "Contents of dist/:"
+        ls -la dist/
+
+    - name: Check distribution with twine
+      run: |
+        twine check dist/*
+        echo "Package validation completed!"
+
+    - name: Display package info
+      run: |
+        echo "=== Package Information ==="
+        pip show -f dist/*.whl || true
+        echo ""
+        echo "=== Distribution sizes ==="
+        du -h dist/*
+
+    - name: Upload artifacts
+      if: ${{ inputs.upload_artifacts }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+        retention-days: 30
+
+    - name: Generate build report
+      run: |
+        echo "# Build Report" > build-report.md
+        echo "" >> build-report.md
+        echo "**Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> build-report.md
+        echo "**Commit:** ${{ github.sha }}" >> build-report.md
+        echo "**Ref:** ${{ github.ref }}" >> build-report.md
+        echo "" >> build-report.md
+        echo "## Built Distributions" >> build-report.md
+        echo '```' >> build-report.md
+        ls -la dist/ >> build-report.md
+        echo '```' >> build-report.md
+        echo "" >> build-report.md
+        echo "## Wheel Contents" >> build-report.md
+        echo '```' >> build-report.md
+        unzip -l dist/*.whl | head -50 >> build-report.md
+        echo '```' >> build-report.md
+
+    - name: Upload build report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-report
+        path: build-report.md
+        retention-days: 30

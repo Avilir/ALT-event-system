@@ -1,0 +1,38 @@
+# Code Owners for ALT-event-system
+# These owners will be automatically requested for review when someone
+# opens a pull request modifying code that they own.
+
+# Global owners - will be requested for review on all PRs
+* @Avilir
+
+# Python source code
+/src/ @Avilir
+*.py @Avilir
+
+# Tests
+/tests/ @Avilir
+
+# Documentation
+/docs/ @Avilir
+*.md @Avilir
+/README.md @Avilir
+/CHANGELOG.md @Avilir
+
+# Configuration and build files
+/pyproject.toml @Avilir
+/setup.py @Avilir
+/Makefile @Avilir
+/requirements*.txt @Avilir
+
+# CI/CD
+/.github/ @Avilir
+
+# Scripts
+/scripts/ @Avilir
+
+# Git configuration
+/.gitignore @Avilir
+/.gitattributes @Avilir
+
+# Pre-commit configuration
+/.pre-commit-config.yaml @Avilir
