@@ -2,7 +2,6 @@
 Tests for EventSystem history functionality.
 """
 
-import pytest
 from alt_event_system import EventSystem
 
 

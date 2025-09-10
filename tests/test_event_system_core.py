@@ -2,9 +2,8 @@
 Core functionality tests for EventSystem.
 """
 
-import pytest
-from unittest.mock import Mock
 import logging
+from unittest.mock import Mock
 
 from alt_event_system import Event, EventSystem
 

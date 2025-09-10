@@ -5,16 +5,15 @@ This module provides an event-driven architecture that enables
 components to communicate without tight coupling.
 """
 
-from typing import Dict, Any, Callable, List, Optional
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import logging
+from typing import Any, Callable, Dict, List, Optional
 
 from .constants import (
     DEFAULT_EVENT_HISTORY_LIMIT,
     DEFAULT_EVENT_HISTORY_QUERY_LIMIT,
 )
-
 
 logger = logging.getLogger(__name__)
 

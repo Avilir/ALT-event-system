@@ -2,17 +2,12 @@
 Unit tests for EventSystem and related classes.
 """
 
-import pytest
 from datetime import datetime, timezone
 from unittest.mock import Mock
-import logging
-from typing import Dict, Any
 
-from alt_event_system import (
-    Event,
-    EventSystem,
-    EventSystemError,
-)
+import pytest
+
+from alt_event_system import Event, EventSystem
 
 
 def create_named_mock(name="mock_handler"):
